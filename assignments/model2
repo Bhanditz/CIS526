@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+import optparse
+import sys
+import operator
+
+optparser = optparse.OptionParser()
+optparser.add_option("-d", "--data", dest="train", default="data/hansards", help="Data filename prefix (default=data)")
+optparser.add_option("-e", "--english", dest="english", default="e", help="Suffix of English filename (default=e)")
+optparser.add_option("-f", "--french", dest="french", default="f", help="Suffix of French filename (default=f)")
+optparser.add_option("-t", "--threshold", dest="threshold", default=0.5, type="float", help="Threshold for aligning with Dice's coefficient (default=0.5)")
+optparser.add_option("-n", "--num_sentences", dest="num_sents", default=sys.maxint, type="int", help="Number of sentences to use for training and alignment")
+optparser.add_option("-s", "--num_iter", dest="num_iter", default=10, type="int", help="Number of iterations of EM")
+(opts, _) = optparser.parse_args()
+f_data = "%s.%s" % (opts.train, opts.french)
+e_data = "%s.%s" % (opts.train, opts.english)
+
+sys.stderr.write("Reading bitext...\n")
+bitext = [[sentence.strip().split() for sentence in pair] for pair in zip(open(f_data), open(e_data))[:opts.num_sents]]
+
+count = dict() #partial count of english word aligned to french word
+counta = dict() #partial count of english word aligned to french word
+total = dict() #total count of french words
+totala = dict() #total count of french words
+t = dict() #translation probabilities of english word given french word
+a = dict() #alignment probabilities of english word given french word
+sys.stderr.write("Itializing counts...\n")
+
+for F,E in bitext : 
+	le = len(E); lf = len(F)
+	for f in F : 
+		total[f] = 0.0; 
+	for j,e in enumerate(E) : 
+		if j not in totala : totala[j] = {}
+		if le not in totala[j] : totala[j][le] = {} 
+		totala[j][le][lf] = 0.0
+
+vf = len(total) #size of French vocabulary
+for F,E in bitext : 
+	le = len(E); lf = len(F)
+	for i,f in enumerate(F) : 
+		for j,e in enumerate(E) : 
+			if e not in count : count[e] = {}; t[e] = {}
+			if i not in counta : counta[i] = {}; a[i] = {}
+			if j not in counta[i] : counta[i][j] = {}; a[i][j] = {}
+			if le not in counta[i][j] : counta[i][j][le] = {}; a[i][j][le] = {}
+			count[e][f] = 0.0; t[e][f] = 1.0 / vf
+			counta[i][j][le][lf] = 0.0; a[i][j][le][lf] = 1.0 / lf
+
+sys.stderr.write("Size of French : %d\n"%vf)
+sys.stderr.write("Size of English: %d\n"%len(count))
+sys.stderr.write("Initializing translation probabilities...\n")
+
+k = 0 
+for k in range(opts.num_iter) : 
+	sys.stderr.write("EM iteration %d...\n"%k)
+	#initialize
+	for f in total : total[f] = 0.0
+	for j in totala : 
+		for le in totala[j] : 
+			for lf in totala[j][le] : totala[j][le][lf] = 0.0
+	for e in count : 
+		for f in count[e]: count[e][f] = 0.0
+	for i in counta : 
+		for j in counta[i] : 
+			for le in counta[i][j] : 
+				for lf in counta[i][j][le] : counta[i][j][le][lf] = 0.0
+	#E step
+	stotal = dict()
+	for (n, (F, E)) in enumerate(bitext):
+		le = len(E); lf = len(F)
+		for j,e in enumerate(E) : 
+			stotal[e] = 0.0
+			for i,f in enumerate(F) : 
+				stotal[e] += t[e][f] * a[i][j][le][lf]
+		for j,e in enumerate(E) : 
+			for i,f in enumerate(F) : 
+				c = ( t[e][f] * a[i][j][le][lf] ) / stotal[e]
+				count[e][f] += c
+				counta[i][j][le][lf] += c
+				total[f] += c
+				totala[j][le][lf] += c
+	#M step
+	for e in count : 
+		for f in count[e] : t[e][f] = count[e][f] / total[f]
+	for i in counta : 
+		for j in counta[i] : 
+			for le in counta[i][j] : 
+				for lf in counta[i][j][le] : 
+					a[i][j][le][lf] = counta[i][j][le][lf] / totala[j][le][lf]
+
+#Estimate most probable alignments
+for F, E in bitext:
+	le = len(E); lf = len(F)
+	for i,f in enumerate(F) : 
+		ai = [(j,t[e][f]*a[i][j][le][lf]) for (j, e) in enumerate(E)]
+		j, e = sorted(ai, key=operator.itemgetter(1), reverse=True)[0]
+        	sys.stdout.write("%i-%i " % (i,j))
+	sys.stdout.write("\n")

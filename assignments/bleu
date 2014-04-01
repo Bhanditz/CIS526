@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+import optparse
+import glob
+import os, sys
+import math
+import pdb
+from collections import Counter # multiset represented by dictionary
+from nltk.util import ngrams
+
+N = 4
+def weight(n) : return 1.0 / N
+
+def batch(iterable, n = 1):
+   l = len(iterable)
+   for ndx in range(0, l, n): yield iterable[ndx:min(ndx+n, l)]
+
+def score(system, reference):
+  system_bleu = 0.0
+  for hyp, ref in zip(system, reference) : 
+    bleu = 0.0
+    r = len(ref); c = len(hyp)
+    if r < c : bp = 1
+    else : bp = math.exp((1 - r) / c)
+    for n in range(1,N) : 
+      system_ngrams = set([s for s in ngrams(hyp, n)])
+      ref_ngrams = set([s for s in ngrams(ref, n)])
+      try : pn = float(len(system_ngrams.intersection(ref_ngrams))) / len(system_ngrams)
+      except ZeroDivisionError : pn = 0.0
+      try : bleu += bp * (math.exp(weight(n) * math.log(pn)))
+      except ValueError : bleu += 0
+    system_bleu += bleu
+  return system_bleu
+ 
+optparser = optparse.OptionParser()
+optparser.add_option("-d", "--data-dir", dest="data", default="data/dev", help="Directory containing system outputs")
+(opts,_) = optparser.parse_args()
+(source, reference) = (opts.data + "/source", opts.data + "/reference")
+
+ref = [line.split() for line in open(reference)]
+
+# read and score each system and output ordered by score
+sys_scores = [(os.path.basename(f), score([line.split() for line in open(f)], ref)) for f in glob.glob(opts.data + "/*") if f != reference and f != source]
+for (sysname, score) in sorted(sys_scores, key=lambda x: -x[1]):
+  print sysname
