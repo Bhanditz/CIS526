@@ -11,7 +11,7 @@ hyp = [set(l.strip().split()) for l in open(opts.hyp).readlines()]
 
 tp = 0.0; nh = 0.0; nr = 0.0
 
-for h, r in zip(ref, hyp) : 
+for r,h in zip(ref, hyp) : 
 	tp += len(r.intersection(h))
 	nh += len(h)
 	nr += len(r)
@@ -21,4 +21,7 @@ R = tp / nr
 
 F = ( 2 * P * R ) / ( P + R )
 
+
+print tp, nh, nr
+print P, R, F
 print 1 - F
