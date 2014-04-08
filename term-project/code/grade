@@ -22,6 +22,5 @@ R = tp / nr
 F = ( 2 * P * R ) / ( P + R )
 
 
-print tp, nh, nr
-print P, R, F
+#print P, R, F
 print 1 - F
