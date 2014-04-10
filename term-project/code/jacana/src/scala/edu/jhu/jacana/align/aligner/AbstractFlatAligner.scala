@@ -65,6 +65,7 @@ abstract class AbstractFlatAligner extends Loggable {
     var phraseBased = false
     var academic = false
     var reverse = false
+    var defaultSystem = false
     
     var heapSizeStart:Long = 0
     var heapSizeEnd:Long = 0
@@ -99,6 +100,7 @@ abstract class AbstractFlatAligner extends Loggable {
 	    options.addOption("", "src", true, "source language (en/fr, default: en)")
 	    options.addOption("", "tgt", true, "target language (en, default: en)")
 	    options.addOption("", "reverse", false, "running source/target in reverse (use reverse for features)")
+	    options.addOption("", "default", false, "running default configuration")
 	    		
 	    val line:CommandLine  = parser.parse(options, args)
 	    if (line.hasOption("help")) {
@@ -129,6 +131,7 @@ abstract class AbstractFlatAligner extends Loggable {
 	    phraseBased = line.hasOption("phrase")
 	    academic = line.hasOption("academic")
 	    reverse = line.hasOption("reverse")
+	    defaultSystem = line.hasOption("default")
 	    
 	    return false
 	}

@@ -56,19 +56,16 @@ class FlatAligner extends AbstractFlatAligner {
 	         prop.load(new FileInputStream(configFilename))
          AlignerParams.parseParameters(prop)
 
-//         FeatureExtractors = Array[AlignFeature](GIZAAlignFeature, NULLAlignFeature, GIZAReverseAlignFeature, StringSimilarityAlignFeature, DistortionAlignFeature, DictionaryAlignFeature, Model4AlignFeature, Model4ReverseAlignFeature)
-           FeatureExtractors = Array[AlignFeature](DictionaryAlignFeature, OrthographicAlignFeature, PositionAlignFeature) //WordPairAlignFeature
-         if (reverse) {
-           FeatureExtractors ++= Array[AlignFeature](Model4AlignFeature, GIZAAlignFeature, NULLAlignFeature)
-        }
-         else {
-           FeatureExtractors ++= Array[AlignFeature](Model4ReverseAlignFeature, GIZAReverseAlignFeature, NULLReverseAlignFeature)
-         }
-
-//         FeatureExtractors =  Array[AlignFeature](DistortionAlignFeature, 
-//                 StringSimilarityAlignFeature, /*ContextualAlignFeature, PositionalAlignFeature, */
-//                 PosTagAlignFeature, PPDBsimpleAlignFeature, WordnetAlignFeature, Word2VecAlignFeature, 
-//                 WiktionaryRelationsAlignFeature /*, NamePhylogenyAlignFeature*/) 
+           if (defaultSystem) { FeatureExtractors = Array[AlignFeature]() } 
+           else { FeatureExtractors = Array[AlignFeature](DictionaryAlignFeature) } //, OrthographicAlignFeature, PositionAlignFeature) } 
+           if (reverse) {
+              FeatureExtractors ++= Array[AlignFeature](GIZAAlignFeature) 
+              if (!defaultSystem){ FeatureExtractors ++= Array[AlignFeature](Model4AlignFeature) }//, NULLAlignFeature)
+           }
+           else {
+              FeatureExtractors ++= Array[AlignFeature](GIZAReverseAlignFeature) 
+              if (!defaultSystem){ FeatureExtractors ++= Array[AlignFeature](Model4ReverseAlignFeature) }//, NULLReverseAlignFeature)
+           }
          if (academic)
              FeatureExtractors ++=  Array[AlignFeature](UmbcSimilarityAlignFeature)
          // these feature data are stored in my local disk and are too big to be delivered to 3rd parties
