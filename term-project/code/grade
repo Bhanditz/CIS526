@@ -15,6 +15,11 @@ for r,h in zip(ref, hyp) :
 	tp += len(r.intersection(h))
 	nh += len(h)
 	nr += len(r)
+#	p = len(r.intersection(h)) / float(len(h))
+#	c = len(r.intersection(h)) / float(len(r))
+#	try : f = ( 2 * p * c ) / ( p + c )
+#	except ZeroDivisionError : f = 0
+#	print '%s\t%s\t%s\t%f\t%f\t%f'%(' '.join(list(r)), ' '.join(list(h)), ' '.join(list(r.intersection(h))), p, c, f) 
 
 P = tp / nh
 R = tp / nr
@@ -22,5 +27,5 @@ R = tp / nr
 F = ( 2 * P * R ) / ( P + R )
 
 
-#print P, R, F
+print P, R, F
 print 1 - F

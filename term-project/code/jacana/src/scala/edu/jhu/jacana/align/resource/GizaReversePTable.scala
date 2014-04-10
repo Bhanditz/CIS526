@@ -7,6 +7,8 @@ import scala.collection.mutable
 import edu.jhu.jacana.util.FileManager
 import scala.collection.mutable.HashMap
 import edu.jhu.jacana.align.util.AlignerParams
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashSet
 
 import java.io.PrintStream
 
@@ -16,12 +18,13 @@ import java.io.PrintStream
  */
 object GizaReversePTable {
 
-//    var dbPathToken:String = FileManager.getResource("resources/giza/es-en.ptable")
-//    var nullPathToken:String = FileManager.getResource("resources/giza/es-en.nullalign")
     var dbPathToken:String = FileManager.getResource("resources/giza/en-es.ptable")
     var nullPathToken:String = FileManager.getResource("resources/giza/en-es.nullalign")
+//    var dbPathToken:String = FileManager.getResource("resources/giza/en-es.ptable")
+//    var nullPathToken:String = FileManager.getResource("resources/giza/en-es.nullalign")
     val pairs = new mutable.HashMap[String, Float]()
     val nulls = new mutable.HashMap[String, Float]()
+    val vocab = new HashSet[String]();
     init()
     
     def init(dbName:String = dbPathToken) {
@@ -51,6 +54,7 @@ object GizaReversePTable {
             val splits = line.split("\t") 
             val w = splits(0); val p = splits(1); 
             nulls.put(w, p.toFloat)
+            vocab += w
             line = reader.readLine()
         }
         reader.close()       
@@ -64,7 +68,19 @@ object GizaReversePTable {
     }
 
     def nullprob(w:String): Float = {
-        return pairs.getOrElse(w, 0)
+        return nulls.getOrElse(w, 0)
+    }
+
+    def sumAlignProb(w:String): Float = {
+	    val buffer = new ArrayBuffer[Float]()
+      vocab.foreach( v => buffer.append(prob(w,v))) 
+      return buffer.sum
+    }
+
+    def maxAlignProb(w:String): Float = {
+	    val buffer = new ArrayBuffer[Float]()
+      vocab.foreach( v => buffer.append(prob(w,v))) 
+      return buffer.max
     }
 
     private def makePhrase(s1: String, s2: String): String = s1+"::"+s2 //s1.toLowerCase()+"::"+s2.toLowerCase()

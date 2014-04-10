@@ -64,6 +64,7 @@ abstract class AbstractFlatAligner extends Loggable {
     val dataDirEdinburghPhrases = "alignment-data/edinburgh/synthetic-phrases/"
     var phraseBased = false
     var academic = false
+    var reverse = false
     
     var heapSizeStart:Long = 0
     var heapSizeEnd:Long = 0
@@ -97,6 +98,7 @@ abstract class AbstractFlatAligner extends Loggable {
 	            "only use this when running academic experiments with full feature sets.")
 	    options.addOption("", "src", true, "source language (en/fr, default: en)")
 	    options.addOption("", "tgt", true, "target language (en, default: en)")
+	    options.addOption("", "reverse", false, "running source/target in reverse (use reverse for features)")
 	    		
 	    val line:CommandLine  = parser.parse(options, args)
 	    if (line.hasOption("help")) {
@@ -126,6 +128,7 @@ abstract class AbstractFlatAligner extends Loggable {
 	    exitIfNotExist(configFilename)
 	    phraseBased = line.hasOption("phrase")
 	    academic = line.hasOption("academic")
+	    reverse = line.hasOption("reverse")
 	    
 	    return false
 	}
@@ -213,11 +216,7 @@ abstract class AbstractFlatAligner extends Loggable {
     def decode(inputFile: String, outputFname: String): Int = {
         
        	var writer: PrintWriter = null
-        if (outputFname != null) {
-        	writer = new PrintWriter(new File(outputFname), "UTF-8")
-        	writer.write("[\n")
-        }
-       	
+      	
       	var counter = 0
       	
       	// Vulcan XML
@@ -321,42 +320,79 @@ abstract class AbstractFlatAligner extends Loggable {
             val result = new StreamResult(outputFname);
             transformer.transform(source, result);
        	} else {
+       	    // output to json format
+            if (outputFname != null) {
+            	writer = new PrintWriter(new File(outputFname), "UTF-8")
+        	   	writer.write("[\n")
+            }
+ 
+            if (inputFile.toLowerCase().endsWith(".json")) {
+		    	val trainData = new AlignTrainData(inputFile, this.transpose, this.tokenize)
+		    	val listTrainData = trainData.getTrainData
+		    	for (i <- 0 until listTrainData.length) {
+		    	    val alignedRecord = listTrainData(i)
+                    counter += 1
+                    if (counter % 1000 == 0) {
+                        println(inputFile + "\t" + counter.toString)
+                    }
+                    var sent1 = alignedRecord.getPair().src
+                    var sent2 = alignedRecord.getPair().tgt
+                    if (sent1.length() == 0 || sent2.length() == 0) {
+                        log.error("skipping, not a pair: " + alignedRecord.getPair().id)
+                    } else {
+   	                    if (transpose) {
+   	                        var tmp = sent1; sent1 = sent2; sent2 = tmp;
+   	                    }
+                        var record = new AlignTestRecord(sent1, sent2, this.tokenize, alignedRecord.getPair.id)
+                        val score = this.decode(record)
+                        if (writer != null) {
+                          if (outputFname.contains("json")) {
+                            writer.print(record.toJSON(alignedRecord.getPair.id))
+                            if (i < listTrainData.length - 1)
+                              writer.print("\t,\n")
+                          } else
+                            writer.print(record.toMsrFormat)
+                        }
+                    }
+		    	}
+       	    } else {
        	
-        	val f = Source.fromFile(inputFile, "UTF-8")
-        	val lineIterator = f.getLines()
-        	//val total = lineIterator.length
-            while (lineIterator.hasNext) {
-                counter += 1
-                if (counter % 1000 == 0) {
-                    println(inputFile + "\t" + counter.toString)
-                }
-                var line = lineIterator.next()
-                //println(line)
-                val sents = line.trim().split("\\t")
-                var sent1 = sents(0); var sent2 = sents(1)
-                if (sent1.length() == 0 || sent2.length() == 0) {
-                    log.error("skipping, not a pair in line: " + line)
-                } else {
-   	                if (transpose) {
-   	                    var tmp = sent1; sent1 = sent2; sent2 = tmp;
-   	                }
-                    var record = new AlignTestRecord(sent1, sent2, this.tokenize)
-                    val score = this.decode(record)
-                    if (writer != null) {
-                      if (outputFname.contains("json")) {
-                        writer.print(record.toJSON(counter.toString))
-                        if (lineIterator.hasNext)
-                          writer.print("\t,\n")
-                      } else
-                        writer.print(record.toMsrFormat)
+            	val f = Source.fromFile(inputFile, "UTF-8")
+            	val lineIterator = f.getLines()
+            	//val total = lineIterator.length
+                while (lineIterator.hasNext) {
+                    counter += 1
+                    if (counter % 1000 == 0) {
+                        println(inputFile + "\t" + counter.toString)
+                    }
+                    var line = lineIterator.next()
+                    //println(line)
+                    val sents = line.trim().split("\\t")
+                    var sent1 = sents(0); var sent2 = sents(1)
+                    if (sent1.length() == 0 || sent2.length() == 0) {
+                        log.error("skipping, not a pair in line: " + line)
+                    } else {
+   	                    if (transpose) {
+   	                        var tmp = sent1; sent1 = sent2; sent2 = tmp;
+   	                    }
+                        var record = new AlignTestRecord(sent1, sent2, this.tokenize)
+                        val score = this.decode(record)
+                        if (writer != null) {
+                          if (outputFname.contains("json")) {
+                            writer.print(record.toJSON(counter.toString))
+                            if (lineIterator.hasNext)
+                              writer.print("\t,\n")
+                          } else
+                            writer.print(record.toMsrFormat)
+                        }
                     }
                 }
-            }
-        	if (writer != null) {
-            	writer.write("]\n")
-        	    writer.close()
+       	    }
+            if (writer != null) {
+                writer.write("]\n")
+                writer.close()
                 println("aligned output written to "+outputFname)
-        	}
+            }
        	}
     	  
     	return counter

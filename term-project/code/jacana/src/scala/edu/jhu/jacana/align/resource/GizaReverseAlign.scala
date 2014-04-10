@@ -12,9 +12,9 @@ import edu.jhu.jacana.align.util.AlignerParams
  * @author Xuchen Yao
  *
  */
-object GizaAlign{
+object GizaReverseAlign{
 
-    var dbPathToken:String = FileManager.getResource("resources/giza/es-en.aligns")
+    var dbPathToken:String = FileManager.getResource("resources/giza/en-es.aligns")
     val pairs = new mutable.HashMap[String, HashMap[Int, Int]]()
     init()
     

@@ -12,9 +12,9 @@ import java.util.Arrays
  * @author Xuchen Yao
  *
  */
-class AlignTestRecord (sent1: String, sent2: String, tokenize:Boolean = true) extends SegmentAlignSequence {
+class AlignTestRecord (sent1: String, sent2: String, tokenize:Boolean = true, id:String="") extends SegmentAlignSequence {
     
-    var pair = new AlignPair("", sent1, sent2, process = true, tokenize)
+    var pair = new AlignPair(id, sent1, sent2, process = true, tokenize)
     private var numTokens = pair.srcLen
     
     // each token's label
